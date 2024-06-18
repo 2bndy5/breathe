@@ -873,6 +873,7 @@ class SphinxRenderer:
         return brief + detailed
 
     def detaileddescription(self, node) -> List[Node]:
+        self.context = cast(RenderContext, self.context)
         detailedCand = self.render_optional(node.detaileddescription)
         # all field_lists must be at the top-level of the desc_content, so pull them up
         fieldLists: List[nodes.field_list] = []
@@ -885,9 +886,17 @@ class SphinxRenderer:
 
         detailed = []
         for candNode in detailedCand:
-            pullup(candNode, nodes.field_list, fieldLists)
-            pullup(candNode, nodes.note, admonitions)
-            pullup(candNode, nodes.warning, admonitions)
+            breathe_directive_name = self.context.directive_args[0]
+            pullup_types = self.app.config.breathe_detaileddesc_pullup_types
+            if breathe_directive_name in pullup_types:
+                for nodeTypeString in pullup_types[breathe_directive_name]:
+                    if nodeTypeString == "note":
+                        pullup(candNode, nodes.note, admonitions)
+                    elif nodeTypeString == "warning":
+                        pullup(candNode, nodes.warning, admonitions)
+                    elif nodeTypeString == "fieldlist":
+                        pullup(candNode, nodes.field_list, fieldLists)
+
             # and collapse paragraphs
             for para in candNode.traverse(nodes.paragraph):
                 if (
@@ -2402,12 +2411,9 @@ class SphinxRenderer:
             # Use self.project_info.project_path as the XML_OUTPUT path, and
             # make it absolute with consideration to the conf.py path
             project_path = self.project_info.project_path()
-            if os.path.isabs(project_path):
-                dot_file_path = os.path.abspath(project_path + os.sep + dot_file_path)
-            else:
-                dot_file_path = os.path.abspath(
-                    self.app.confdir + os.sep + project_path + os.sep + dot_file_path
-                )
+            dot_file_path = os.path.abspath(
+                os.path.join(self.app.confdir, project_path, dot_file_path)
+            )
         try:
             with open(dot_file_path, encoding="utf-8") as fp:
                 dotcode = fp.read()

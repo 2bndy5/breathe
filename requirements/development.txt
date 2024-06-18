@@ -12,3 +12,6 @@ black==22.3.0
 
 sphinx-copybutton
 furo
+
+# to pull in defusedxml as a pinned dependency of sphinx
+sphinx[test]
